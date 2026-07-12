@@ -127,7 +127,7 @@ export function AuditDetailPage() {
   });
 
   if (!id) {
-    return <ErrorState message="Audit cycle id missing." onRetry={() => navigate("/audits")} />;
+    return <ErrorState message="Audit cycle id missing." onRetry={() => navigate("/app/audits")} />;
   }
 
   if (detailQuery.isLoading) return <PageSkeleton />;
@@ -170,7 +170,7 @@ export function AuditDetailPage() {
         description={scopeExplanation(cycle)}
         actions={
           <>
-            <Button variant="secondary" onClick={() => navigate("/audits")}>
+            <Button variant="secondary" onClick={() => navigate("/app/audits")}>
               <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={1.75} />
               Back
             </Button>

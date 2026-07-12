@@ -101,7 +101,7 @@ export function AllocationsPage() {
               />
               Refresh
             </Button>
-            <Button onClick={() => navigate("/allocations/new")}>
+            <Button onClick={() => navigate("/app/allocations/new")}>
               <ArrowLeftRight
                 aria-hidden="true"
                 className="size-4"
@@ -153,7 +153,7 @@ export function AllocationsPage() {
             description="Create an allocation to populate this table."
             icon={Clock3}
             action={
-              <Button onClick={() => navigate("/allocations/new")}>
+              <Button onClick={() => navigate("/app/allocations/new")}>
                 New allocation
               </Button>
             }

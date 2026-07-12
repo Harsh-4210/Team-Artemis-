@@ -33,7 +33,7 @@ export function SignupPage() {
       await authApi.signup(values);
       const session = await authApi.login({ email: values.email, password: values.password });
       setSession(session.token, session.user);
-      navigate("/", { replace: true });
+      navigate("/app", { replace: true });
     } catch (error) {
       setFormError(getErrorMessage(error, "We could not create your account."));
     }

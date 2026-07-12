@@ -5,6 +5,6 @@ import { useAuthStore } from "../stores/authStore";
 
 export function RoleGate({ roles, children }: { roles: Role[]; children: ReactNode }) {
   const role = useAuthStore((state) => state.user?.role);
-  if (!role || !roles.includes(role)) return <Navigate to="/" replace />;
+  if (!role || !roles.includes(role)) return <Navigate to="/app" replace />;
   return children;
 }

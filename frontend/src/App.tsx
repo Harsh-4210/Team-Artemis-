@@ -22,8 +22,10 @@ import { NotFoundPage } from "./features/shared/pages/NotFoundPage";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { PublicOnlyRoute } from "./routes/PublicOnlyRoute";
 import { RoleGate } from "./routes/RoleGate";
+import { LandingPage } from "./features/landing/pages/LandingPage";
 
 export const router = createBrowserRouter([
+  { path: "/", element: <LandingPage /> },
   {
     path: "/login",
     element: (
@@ -41,7 +43,7 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: "/",
+    path: "/app",
     element: (
       <ProtectedRoute>
         <AppShell />

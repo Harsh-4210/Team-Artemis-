@@ -21,16 +21,16 @@ export type NavigationItem = {
 };
 
 export const navigationItems: NavigationItem[] = [
-  { label: "Dashboard", href: "/", icon: Gauge },
-  { label: "Assets", href: "/assets", icon: Boxes },
-  { label: "Allocations", href: "/allocations", icon: ArrowRightLeft },
-  { label: "Transfers", href: "/transfers", icon: ArrowLeftRight },
-  { label: "Bookings", href: "/bookings", icon: BookOpen },
-  { label: "Maintenance", href: "/maintenance", icon: Wrench },
-  { label: "Audits", href: "/audits", icon: ClipboardCheck },
-  { label: "Reports", href: "/reports", icon: BarChart3 },
-  { label: "Activity logs", href: "/activity-logs", icon: History, roles: ["ADMIN"] },
-  { label: "Org Setup", href: "/org-setup", icon: Settings2, roles: ["ADMIN"] },
+  { label: "Dashboard", href: "/app", icon: Gauge },
+  { label: "Assets", href: "/app/assets", icon: Boxes },
+  { label: "Allocations", href: "/app/allocations", icon: ArrowRightLeft },
+  { label: "Transfers", href: "/app/transfers", icon: ArrowLeftRight },
+  { label: "Bookings", href: "/app/bookings", icon: BookOpen },
+  { label: "Maintenance", href: "/app/maintenance", icon: Wrench },
+  { label: "Audits", href: "/app/audits", icon: ClipboardCheck },
+  { label: "Reports", href: "/app/reports", icon: BarChart3 },
+  { label: "Activity logs", href: "/app/activity-logs", icon: History, roles: ["ADMIN"] },
+  { label: "Org Setup", href: "/app/org-setup", icon: Settings2, roles: ["ADMIN"] },
 ];
 
 export function getNavigationForRole(role: Role) {

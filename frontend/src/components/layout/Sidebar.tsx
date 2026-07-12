@@ -53,7 +53,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               <li key={href}>
                 <NavLink
                   to={href}
-                  end={href === "/"}
+                  end={href === "/app"}
                   onClick={onClose}
                   className={({ isActive }) => cn(
                     "flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-[var(--muted)] transition-colors duration-200 hover:bg-[var(--surface-strong)] hover:text-[var(--ink)]",

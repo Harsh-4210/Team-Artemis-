@@ -80,7 +80,7 @@ export function AllocationCreatePage() {
       });
       await queryClient.invalidateQueries({ queryKey: assetsQueryKeys.all });
       toast.success("Asset allocated");
-      navigate("/allocations");
+      navigate("/app/allocations");
     },
     onError: (error) => {
       const details = (
@@ -111,7 +111,7 @@ export function AllocationCreatePage() {
       toast.success("Transfer request sent — the current holder was notified");
       setTransferOpen(false);
       setConflict(null);
-      navigate("/transfers");
+      navigate("/app/transfers");
     },
     onError: (error) =>
       toast.error(
@@ -178,7 +178,7 @@ export function AllocationCreatePage() {
         title="New allocation"
         description="Allocate an available asset to an employee and set the expected return date."
         actions={
-          <Button variant="secondary" onClick={() => navigate("/allocations")}>
+          <Button variant="secondary" onClick={() => navigate("/app/allocations")}>
             <ArrowLeft
               aria-hidden="true"
               className="size-4"
@@ -247,7 +247,7 @@ export function AllocationCreatePage() {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => navigate("/allocations")}
+            onClick={() => navigate("/app/allocations")}
           >
             Cancel
           </Button>

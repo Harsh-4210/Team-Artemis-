@@ -50,6 +50,6 @@ export function ProtectedRoute({ children, roles: allowedRoles }: { children: Re
 
   if (!hasHydrated || checking) return <RouteLoading />;
   if (!token || !user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to="/" replace />;
+  if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to="/app" replace />;
   return children;
 }

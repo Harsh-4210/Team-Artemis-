@@ -45,7 +45,7 @@ export function AssetDetailPage() {
     return (
       <ErrorState
         message="Asset id missing."
-        onRetry={() => navigate("/assets")}
+        onRetry={() => navigate("/app/assets")}
       />
     );
   }
@@ -60,7 +60,7 @@ export function AssetDetailPage() {
             : "Inspect asset history and current custody."
         }
         actions={
-          <Button variant="secondary" onClick={() => navigate("/assets")}>
+          <Button variant="secondary" onClick={() => navigate("/app/assets")}>
             <ArrowLeft
               aria-hidden="true"
               className="size-4"

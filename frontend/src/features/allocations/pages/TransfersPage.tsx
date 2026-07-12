@@ -114,7 +114,7 @@ export function TransfersPage() {
             </Button>
             <Button
               variant="secondary"
-              onClick={() => navigate("/allocations/new")}
+              onClick={() => navigate("/app/allocations/new")}
             >
               <ArrowLeftRight
                 aria-hidden="true"

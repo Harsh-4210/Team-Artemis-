@@ -166,7 +166,7 @@ export function AssetsPage() {
             </Button>
             <Button
               variant="secondary"
-              onClick={() => navigate("/allocations/new")}
+              onClick={() => navigate("/app/allocations/new")}
             >
               <ArrowRightLeft
                 aria-hidden="true"
