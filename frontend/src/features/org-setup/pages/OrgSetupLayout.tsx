@@ -2,10 +2,12 @@ import { NavLink, Outlet } from "react-router";
 import { PageHeader } from "../../../components/shared/PageHeader";
 import { cn } from "../../../lib/utils";
 
+// Relative paths so the tabs follow the parent route (e.g. /app/org-setup/*)
+// automatically if the app is ever re-mounted at a different prefix.
 const tabs = [
-  { label: "Departments", href: "/org-setup/departments" },
-  { label: "Categories", href: "/org-setup/categories" },
-  { label: "Employees", href: "/org-setup/employees" },
+  { label: "Departments", href: "departments" },
+  { label: "Categories", href: "categories" },
+  { label: "Employees", href: "employees" },
 ];
 
 export function OrgSetupLayout() {
