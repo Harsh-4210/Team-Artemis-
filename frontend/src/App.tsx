@@ -3,6 +3,10 @@ import { Navigate, RouterProvider, createBrowserRouter } from "react-router";
 import { AppShell } from "./components/layout/AppShell";
 import { LoginPage } from "./features/auth/pages/LoginPage";
 import { SignupPage } from "./features/auth/pages/SignupPage";
+import { AssetDetailPage } from "./features/assets/pages/AssetDetailPage";
+import { AssetsPage } from "./features/assets/pages/AssetsPage";
+import { AllocationCreatePage } from "./features/allocations/pages/AllocationCreatePage";
+import { AllocationsPage } from "./features/allocations/pages/AllocationsPage";
 import { BookingsPage } from "./features/bookings/pages/BookingsPage";
 import { DashboardPage } from "./features/dashboard/pages/DashboardPage";
 import { MaintenancePage } from "./features/maintenance/pages/MaintenancePage";
@@ -17,21 +21,68 @@ import { PublicOnlyRoute } from "./routes/PublicOnlyRoute";
 import { RoleGate } from "./routes/RoleGate";
 
 export const router = createBrowserRouter([
-  { path: "/login", element: <PublicOnlyRoute><LoginPage /></PublicOnlyRoute> },
-  { path: "/signup", element: <PublicOnlyRoute><SignupPage /></PublicOnlyRoute> },
+  {
+    path: "/login",
+    element: (
+      <PublicOnlyRoute>
+        <LoginPage />
+      </PublicOnlyRoute>
+    ),
+  },
+  {
+    path: "/signup",
+    element: (
+      <PublicOnlyRoute>
+        <SignupPage />
+      </PublicOnlyRoute>
+    ),
+  },
   {
     path: "/",
-    element: <ProtectedRoute><AppShell /></ProtectedRoute>,
+    element: (
+      <ProtectedRoute>
+        <AppShell />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, element: <DashboardPage /> },
-      { path: "assets", element: <ModulePlaceholderPage title="Assets" description="Search and track the organization’s physical assets." emptyTitle="Asset registry is coming in Phase 2" emptyDescription="Asset managers will register assets, inspect custody, and prevent double allocation here." icon={Boxes} /> },
+      { path: "assets", element: <AssetsPage /> },
+      { path: "assets/:id", element: <AssetDetailPage /> },
+      { path: "allocations", element: <AllocationsPage /> },
+      { path: "allocations/new", element: <AllocationCreatePage /> },
       { path: "bookings", element: <BookingsPage /> },
       { path: "maintenance", element: <MaintenancePage /> },
-      { path: "audits", element: <ModulePlaceholderPage title="Audits" description="Verify assets through assigned, structured audit cycles." emptyTitle="Audit cycles are coming in Phase 4" emptyDescription="Auditors will verify asset condition and report discrepancies from this workspace." icon={ClipboardCheck} /> },
-      { path: "reports", element: <ModulePlaceholderPage title="Reports" description="Review allocation, utilization, maintenance, and booking patterns." emptyTitle="Operational reports are coming in Phase 4" emptyDescription="Authorized roles will see scoped metrics and downloadable reports here." icon={BarChart3} /> },
+      {
+        path: "audits",
+        element: (
+          <ModulePlaceholderPage
+            title="Audits"
+            description="Verify assets through assigned, structured audit cycles."
+            emptyTitle="Audit cycles are coming in Phase 4"
+            emptyDescription="Auditors will verify asset condition and report discrepancies from this workspace."
+            icon={ClipboardCheck}
+          />
+        ),
+      },
+      {
+        path: "reports",
+        element: (
+          <ModulePlaceholderPage
+            title="Reports"
+            description="Review allocation, utilization, maintenance, and booking patterns."
+            emptyTitle="Operational reports are coming in Phase 4"
+            emptyDescription="Authorized roles will see scoped metrics and downloadable reports here."
+            icon={BarChart3}
+          />
+        ),
+      },
       {
         path: "org-setup",
-        element: <RoleGate roles={["ADMIN"]}><OrgSetupLayout /></RoleGate>,
+        element: (
+          <RoleGate roles={["ADMIN"]}>
+            <OrgSetupLayout />
+          </RoleGate>
+        ),
         children: [
           { index: true, element: <Navigate to="departments" replace /> },
           { path: "departments", element: <DepartmentsPage /> },
