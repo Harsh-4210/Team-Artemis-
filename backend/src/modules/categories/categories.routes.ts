@@ -12,8 +12,20 @@ import {
 
 export const categoriesRouter = Router();
 
-categoriesRouter.use(authenticateToken, requireRole("ADMIN"));
+categoriesRouter.use(authenticateToken);
 categoriesRouter.get("/", asyncHandler(listCategoriesController));
-categoriesRouter.post("/", asyncHandler(createCategoryController));
-categoriesRouter.patch("/:id", asyncHandler(updateCategoryController));
-categoriesRouter.delete("/:id", asyncHandler(deleteCategoryController));
+categoriesRouter.post(
+  "/",
+  requireRole("ADMIN"),
+  asyncHandler(createCategoryController),
+);
+categoriesRouter.patch(
+  "/:id",
+  requireRole("ADMIN"),
+  asyncHandler(updateCategoryController),
+);
+categoriesRouter.delete(
+  "/:id",
+  requireRole("ADMIN"),
+  asyncHandler(deleteCategoryController),
+);

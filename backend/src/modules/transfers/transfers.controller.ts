@@ -3,12 +3,14 @@ import type { Request, Response } from "express";
 import { AppError } from "../../utils/app-error";
 import {
   createTransferSchema,
+  listTransfersQuerySchema,
   rejectTransferSchema,
   transferDecisionSchema,
   transferIdParamsSchema,
 } from "./transfers.schema";
 import {
   approveTransfer,
+  listTransfers,
   rejectTransfer,
   requestTransfer,
 } from "./transfers.service";
@@ -24,20 +26,32 @@ function requireAuth(request: Request) {
   return request.auth;
 }
 
+export async function listTransfersController(
+  request: Request,
+  response: Response,
+) {
+  const auth = requireAuth(request);
+  const query = listTransfersQuerySchema.parse(request.query);
+  response.json({
+    data: await listTransfers(query, {
+      employeeId: auth.employeeId,
+      role: auth.role,
+    }),
+  });
+}
+
 export async function requestTransferController(
   request: Request,
   response: Response,
 ) {
   const auth = requireAuth(request);
   const input = createTransferSchema.parse(request.body);
-  response
-    .status(201)
-    .json({
-      data: await requestTransfer(input, {
-        employeeId: auth.employeeId,
-        role: auth.role,
-      }),
-    });
+  response.status(201).json({
+    data: await requestTransfer(input, {
+      employeeId: auth.employeeId,
+      role: auth.role,
+    }),
+  });
 }
 
 export async function approveTransferController(

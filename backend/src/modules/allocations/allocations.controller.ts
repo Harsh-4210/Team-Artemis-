@@ -11,6 +11,7 @@ import {
   allocateAsset,
   listAllocations,
   listOverdueAllocations,
+  markOverdueAllocations,
   returnAllocation,
 } from "./allocations.service";
 
@@ -50,6 +51,13 @@ export async function listOverdueAllocationsController(
       role: auth.role,
     }),
   });
+}
+
+export async function markOverdueAllocationsController(
+  _request: Request,
+  response: Response,
+) {
+  response.json({ data: await markOverdueAllocations() });
 }
 
 export async function createAllocationController(

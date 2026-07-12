@@ -221,6 +221,7 @@ model TransferRequest {
   status         TransferStatus @default(REQUESTED)
   approvedById   String?
   approvedBy     Employee?      @relation("TransferApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  decisionNotes  String?
   decidedAt      DateTime?
   requestedAt    DateTime       @default(now())
 

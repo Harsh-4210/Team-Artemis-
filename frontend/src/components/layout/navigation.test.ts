@@ -22,6 +22,7 @@ describe("role-aware navigation", () => {
       "Dashboard",
       "Assets",
       "Allocations",
+      "Transfers",
       "Bookings",
       "Maintenance",
       "Audits",

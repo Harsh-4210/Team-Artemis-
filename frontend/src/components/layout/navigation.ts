@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   ArrowRightLeft,
   BarChart3,
   BookOpen,
@@ -22,6 +23,7 @@ export const navigationItems: NavigationItem[] = [
   { label: "Dashboard", href: "/", icon: Gauge },
   { label: "Assets", href: "/assets", icon: Boxes },
   { label: "Allocations", href: "/allocations", icon: ArrowRightLeft },
+  { label: "Transfers", href: "/transfers", icon: ArrowLeftRight },
   { label: "Bookings", href: "/bookings", icon: BookOpen },
   { label: "Maintenance", href: "/maintenance", icon: Wrench },
   { label: "Audits", href: "/audits", icon: ClipboardCheck },

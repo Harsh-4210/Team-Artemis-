@@ -336,6 +336,10 @@ async function main() {
     }
   }
 
+  // Keep AF-XXXX generation ahead of seeded tags.
+  await prisma.$executeRaw`CREATE SEQUENCE IF NOT EXISTS asset_tag_sequence START WITH 1 INCREMENT BY 1`;
+  await prisma.$executeRaw`SELECT setval('asset_tag_sequence', 6, true)`;
+
   console.log(
     "Seed complete: 3 departments, 5 categories, 8 employees, 6 assets, 1 booking, 1 maintenance request.",
   );

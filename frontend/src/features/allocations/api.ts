@@ -3,6 +3,7 @@ import { apiClient } from "../../lib/apiClient";
 import type { AssetCondition, AssetListItem } from "../assets/api";
 
 export type AllocationStatus = "ACTIVE" | "RETURNED" | "OVERDUE";
+export type TransferStatus = "REQUESTED" | "APPROVED" | "REJECTED" | "COMPLETED";
 
 export type Allocation = {
   id: string;
@@ -70,6 +71,45 @@ export type TransferPayload = {
   reason: string;
 };
 
+export type TransferRequest = {
+  id: string;
+  assetId: string;
+  fromEmployeeId: string;
+  toEmployeeId: string;
+  reason: string;
+  status: TransferStatus;
+  decisionNotes: string | null;
+  approvedById: string | null;
+  decidedAt: string | null;
+  requestedAt: string;
+  asset: { id: string; assetTag: string; name: string; status: string };
+  fromEmployee: { id: string; name: string; email: string };
+  toEmployee: { id: string; name: string; email: string };
+  approvedBy: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  } | null;
+};
+
+export type TransferListResponse = {
+  items: TransferRequest[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+export type TransferFilter = {
+  status?: TransferStatus;
+  assetId?: string;
+  page?: number;
+  limit?: number;
+};
+
 export const allocationsApi = {
   async listAllocations(filters: AllocationFilter = {}) {
     const { data } = await apiClient.get("/allocations", { params: filters });
@@ -79,6 +119,9 @@ export const allocationsApi = {
     const { data } = await apiClient.get("/allocations/overdue");
     return (data?.data ?? data) as AllocationListResponse;
   },
+  markOverdue() {
+    return apiClient.post("/allocations/mark-overdue");
+  },
   createAllocation(payload: AllocationPayload) {
     return apiClient.post("/allocations", payload);
   },
@@ -87,6 +130,10 @@ export const allocationsApi = {
     payload: { conditionOnReturn?: AssetCondition; notes?: string },
   ) {
     return apiClient.post(`/allocations/${id}/return`, payload);
+  },
+  async listTransfers(filters: TransferFilter = {}) {
+    const { data } = await apiClient.get("/transfers", { params: filters });
+    return (data?.data ?? data) as TransferListResponse;
   },
   requestTransfer(payload: TransferPayload) {
     return apiClient.post("/transfers", payload);
@@ -104,4 +151,6 @@ export const allocationsQueryKeys = {
   list: (filters: AllocationFilter) =>
     ["allocations", "list", filters] as const,
   overdue: ["allocations", "overdue"] as const,
+  transfers: (filters: TransferFilter = {}) =>
+    ["transfers", "list", filters] as const,
 };

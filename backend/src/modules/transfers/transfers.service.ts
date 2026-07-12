@@ -7,8 +7,10 @@ import {
 
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../utils/app-error";
+import { notify } from "../notifications/notify";
 import type {
   CreateTransferInput,
+  ListTransfersQuery,
   RejectTransferInput,
   TransferDecisionInput,
 } from "./transfers.schema";
@@ -28,14 +30,59 @@ function serializeTransfer(transfer: TransferRow) {
   return transfer;
 }
 
+const APPROVER_ROLES = new Set(["ADMIN", "ASSET_MANAGER", "DEPARTMENT_HEAD"]);
 const MANAGER_ROLES = new Set(["ADMIN", "ASSET_MANAGER"]);
 
 async function currentAllocation(assetId: string) {
   return prisma.allocation.findFirst({
-    where: { assetId, status: AllocationStatus.ACTIVE },
+    where: {
+      assetId,
+      status: { in: [AllocationStatus.ACTIVE, AllocationStatus.OVERDUE] },
+    },
     include: { employee: { select: { id: true, name: true, email: true } } },
     orderBy: { allocatedAt: "desc" },
   });
+}
+
+export async function listTransfers(
+  query: ListTransfersQuery,
+  actor: { employeeId: string; role: string },
+) {
+  const canSeeAll = APPROVER_ROLES.has(actor.role);
+  const where: Prisma.TransferRequestWhereInput = {
+    status: query.status,
+    assetId: query.assetId,
+    ...(canSeeAll
+      ? {}
+      : {
+          OR: [
+            { fromEmployeeId: actor.employeeId },
+            { toEmployeeId: actor.employeeId },
+          ],
+        }),
+  };
+
+  const skip = (query.page - 1) * query.limit;
+  const [items, total] = await Promise.all([
+    prisma.transferRequest.findMany({
+      where,
+      include: transferInclude,
+      orderBy: [{ requestedAt: "desc" }],
+      skip,
+      take: query.limit,
+    }),
+    prisma.transferRequest.count({ where }),
+  ]);
+
+  return {
+    items: items.map(serializeTransfer),
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / query.limit)),
+    },
+  };
 }
 
 export async function requestTransfer(
@@ -66,7 +113,7 @@ export async function requestTransfer(
 
   const target = await prisma.employee.findUnique({
     where: { id: input.toEmployeeId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, name: true },
   });
   if (!target || target.status !== "ACTIVE") {
     throw new AppError(
@@ -86,18 +133,27 @@ export async function requestTransfer(
     );
   }
 
-  return prisma.transferRequest
-    .create({
-      data: {
-        assetId: input.assetId,
-        fromEmployeeId: input.fromEmployeeId,
-        toEmployeeId: input.toEmployeeId,
-        reason: input.reason,
-        status: TransferStatus.REQUESTED,
-      },
-      include: transferInclude,
-    })
-    .then(serializeTransfer);
+  const transfer = await prisma.transferRequest.create({
+    data: {
+      assetId: input.assetId,
+      fromEmployeeId: input.fromEmployeeId,
+      toEmployeeId: input.toEmployeeId,
+      reason: input.reason,
+      status: TransferStatus.REQUESTED,
+    },
+    include: transferInclude,
+  });
+
+  await notify({
+    employeeId: input.fromEmployeeId,
+    type: "TRANSFER_REQUESTED",
+    title: "Transfer requested for your asset",
+    message: `${target.name} requested transfer of ${transfer.asset.assetTag} · ${transfer.asset.name}. Reason: ${input.reason}`,
+    relatedEntityType: "TransferRequest",
+    relatedEntityId: transfer.id,
+  });
+
+  return serializeTransfer(transfer);
 }
 
 export async function approveTransfer(
@@ -105,11 +161,11 @@ export async function approveTransfer(
   input: TransferDecisionInput,
   actor: { employeeId: string; role: string },
 ) {
-  if (!MANAGER_ROLES.has(actor.role)) {
+  if (!APPROVER_ROLES.has(actor.role)) {
     throw new AppError(
       403,
       "FORBIDDEN",
-      "Only asset managers can approve transfers",
+      "Only asset managers or department heads can approve transfers",
     );
   }
 
@@ -143,7 +199,10 @@ export async function approveTransfer(
 
   const approved = await prisma.$transaction(async (tx) => {
     await tx.allocation.updateMany({
-      where: { id: activeAllocation.id, status: AllocationStatus.ACTIVE },
+      where: {
+        id: activeAllocation.id,
+        status: { in: [AllocationStatus.ACTIVE, AllocationStatus.OVERDUE] },
+      },
       data: {
         status: AllocationStatus.RETURNED,
         returnedAt: new Date(),
@@ -171,6 +230,7 @@ export async function approveTransfer(
       data: {
         status: TransferStatus.COMPLETED,
         approvedById: actor.employeeId,
+        decisionNotes: input.notes,
         decidedAt: new Date(),
       },
       include: transferInclude,
@@ -184,6 +244,15 @@ export async function approveTransfer(
     return { allocation, transfer: updated };
   });
 
+  await notify({
+    employeeId: transfer.toEmployeeId,
+    type: "TRANSFER_APPROVED",
+    title: "Asset transfer approved",
+    message: `${approved.transfer.asset.assetTag} · ${approved.transfer.asset.name} is now allocated to you.`,
+    relatedEntityType: "TransferRequest",
+    relatedEntityId: approved.transfer.id,
+  });
+
   return {
     transfer: serializeTransfer(approved.transfer),
     allocation: approved.allocation,
@@ -195,15 +264,18 @@ export async function rejectTransfer(
   input: RejectTransferInput,
   actor: { employeeId: string; role: string },
 ) {
-  if (!MANAGER_ROLES.has(actor.role)) {
+  if (!APPROVER_ROLES.has(actor.role)) {
     throw new AppError(
       403,
       "FORBIDDEN",
-      "Only asset managers can reject transfers",
+      "Only asset managers or department heads can reject transfers",
     );
   }
 
-  const transfer = await prisma.transferRequest.findUnique({ where: { id } });
+  const transfer = await prisma.transferRequest.findUnique({
+    where: { id },
+    include: transferInclude,
+  });
   if (!transfer) {
     throw new AppError(404, "TRANSFER_NOT_FOUND", "Transfer request not found");
   }
@@ -215,15 +287,25 @@ export async function rejectTransfer(
     );
   }
 
-  return prisma.transferRequest
-    .update({
-      where: { id },
-      data: {
-        status: TransferStatus.REJECTED,
-        decidedAt: new Date(),
-        approvedById: actor.employeeId,
-      },
-      include: transferInclude,
-    })
-    .then(serializeTransfer);
+  const updated = await prisma.transferRequest.update({
+    where: { id },
+    data: {
+      status: TransferStatus.REJECTED,
+      decidedAt: new Date(),
+      approvedById: actor.employeeId,
+      decisionNotes: input.reason,
+    },
+    include: transferInclude,
+  });
+
+  await notify({
+    employeeId: transfer.toEmployeeId,
+    type: "TRANSFER_REJECTED",
+    title: "Asset transfer rejected",
+    message: `Transfer of ${transfer.asset.assetTag} · ${transfer.asset.name} was rejected. Reason: ${input.reason}`,
+    relatedEntityType: "TransferRequest",
+    relatedEntityId: transfer.id,
+  });
+
+  return serializeTransfer(updated);
 }

@@ -8,14 +8,14 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import {
-  EmptyState,
   ErrorState,
   PageSkeleton,
 } from "../../../components/shared/Feedback";
 import { Modal } from "../../../components/shared/Modal";
 import { PageHeader } from "../../../components/shared/PageHeader";
+import { AutocompleteField } from "../../../components/ui/AutocompleteField";
 import { Button } from "../../../components/ui/Button";
-import { Field, SelectField } from "../../../components/ui/Field";
+import { Field } from "../../../components/ui/Field";
 import { getErrorMessage } from "../../../lib/utils";
 import { orgApi, orgQueryKeys } from "../../org-setup/api";
 import { assetsApi, assetsQueryKeys } from "../../assets/api";
@@ -54,8 +54,8 @@ export function AllocationCreatePage() {
   const initialHolderId = searchParams.get("holderId") ?? "";
 
   const assetsQuery = useQuery({
-    queryKey: assetsQueryKeys.list({ status: "AVAILABLE", limit: 100 }),
-    queryFn: () => assetsApi.listAssets({ status: "AVAILABLE", limit: 100 }),
+    queryKey: assetsQueryKeys.list({ limit: 100 }),
+    queryFn: () => assetsApi.listAssets({ limit: 100 }),
   });
   const employeesQuery = useQuery({
     queryKey: orgQueryKeys.employees,
@@ -108,10 +108,10 @@ export function AllocationCreatePage() {
       await queryClient.invalidateQueries({
         queryKey: allocationsQueryKeys.all,
       });
-      toast.success("Transfer request sent");
+      toast.success("Transfer request sent — the current holder was notified");
       setTransferOpen(false);
       setConflict(null);
-      navigate("/allocations");
+      navigate("/transfers");
     },
     onError: (error) =>
       toast.error(
@@ -194,30 +194,34 @@ export function AllocationCreatePage() {
         onSubmit={submitAllocation}
         noValidate
       >
-        <SelectField
+        <AutocompleteField
           label="Asset"
+          placeholder="Search by tag or name"
           error={form.formState.errors.assetId?.message}
-          {...form.register("assetId")}
-        >
-          <option value="">Choose an asset</option>
-          {assets.map((asset) => (
-            <option key={asset.id} value={asset.id}>
-              {asset.assetTag} · {asset.name}
-            </option>
-          ))}
-        </SelectField>
-        <SelectField
+          value={form.watch("assetId")}
+          onChange={(value) =>
+            form.setValue("assetId", value, { shouldValidate: true })
+          }
+          options={assets.map((asset) => ({
+            value: asset.id,
+            label: `${asset.assetTag} · ${asset.name}`,
+            description: `${asset.status} · ${asset.location}`,
+          }))}
+        />
+        <AutocompleteField
           label="Employee"
+          placeholder="Search by employee name"
           error={form.formState.errors.employeeId?.message}
-          {...form.register("employeeId")}
-        >
-          <option value="">Choose an employee</option>
-          {employees.map((employee) => (
-            <option key={employee.id} value={employee.id}>
-              {employee.name}
-            </option>
-          ))}
-        </SelectField>
+          value={form.watch("employeeId")}
+          onChange={(value) =>
+            form.setValue("employeeId", value, { shouldValidate: true })
+          }
+          options={employees.map((employee) => ({
+            value: employee.id,
+            label: employee.name,
+            description: employee.email,
+          }))}
+        />
         <Field
           label="Expected return date"
           type="date"
@@ -256,17 +260,24 @@ export function AllocationCreatePage() {
       <Modal
         open={Boolean(conflict)}
         onClose={() => setConflict(null)}
-        title="Asset already allocated"
-        description={
+        title={
           conflict?.currentHolder
-            ? `Currently held by ${conflict.currentHolder}.`
-            : undefined
+            ? `Currently held by ${conflict.currentHolder} — Request Transfer?`
+            : "Asset already allocated"
         }
+        description="This asset cannot be allocated twice. Request a transfer to move custody."
       >
         <div className="space-y-4">
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--muted)]">
-            This asset cannot be allocated twice. Open a transfer request for
-            the current holder instead.
+          <div className="flex items-start gap-3 rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-soft)] p-4 text-sm text-[var(--ink)]">
+            <AlertTriangle
+              aria-hidden="true"
+              className="mt-0.5 size-4 shrink-0"
+              strokeWidth={1.75}
+            />
+            <span>
+              Open a transfer request so the current holder is notified and an
+              asset manager can approve the move.
+            </span>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setConflict(null)}>
@@ -285,7 +296,7 @@ export function AllocationCreatePage() {
                 setTransferOpen(true);
               }}
             >
-              Request transfer
+              Request Transfer
             </Button>
           </div>
         </div>

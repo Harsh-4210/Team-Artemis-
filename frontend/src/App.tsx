@@ -7,6 +7,7 @@ import { AssetDetailPage } from "./features/assets/pages/AssetDetailPage";
 import { AssetsPage } from "./features/assets/pages/AssetsPage";
 import { AllocationCreatePage } from "./features/allocations/pages/AllocationCreatePage";
 import { AllocationsPage } from "./features/allocations/pages/AllocationsPage";
+import { TransfersPage } from "./features/allocations/pages/TransfersPage";
 import { BookingsPage } from "./features/bookings/pages/BookingsPage";
 import { DashboardPage } from "./features/dashboard/pages/DashboardPage";
 import { MaintenancePage } from "./features/maintenance/pages/MaintenancePage";
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
       { path: "assets/:id", element: <AssetDetailPage /> },
       { path: "allocations", element: <AllocationsPage /> },
       { path: "allocations/new", element: <AllocationCreatePage /> },
+      { path: "transfers", element: <TransfersPage /> },
       { path: "bookings", element: <BookingsPage /> },
       { path: "maintenance", element: <MaintenancePage /> },
       {

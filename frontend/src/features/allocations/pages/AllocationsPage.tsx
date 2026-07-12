@@ -217,7 +217,8 @@ export function AllocationsPage() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {allocation.status === "ACTIVE" ? (
+                    {allocation.status === "ACTIVE" ||
+                    allocation.status === "OVERDUE" ? (
                       <Button
                         variant="secondary"
                         className="ml-auto"

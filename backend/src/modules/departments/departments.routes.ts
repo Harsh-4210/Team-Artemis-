@@ -12,8 +12,20 @@ import {
 
 export const departmentsRouter = Router();
 
-departmentsRouter.use(authenticateToken, requireRole("ADMIN"));
+departmentsRouter.use(authenticateToken);
 departmentsRouter.get("/", asyncHandler(listDepartmentsController));
-departmentsRouter.post("/", asyncHandler(createDepartmentController));
-departmentsRouter.patch("/:id", asyncHandler(updateDepartmentController));
-departmentsRouter.delete("/:id", asyncHandler(deleteDepartmentController));
+departmentsRouter.post(
+  "/",
+  requireRole("ADMIN"),
+  asyncHandler(createDepartmentController),
+);
+departmentsRouter.patch(
+  "/:id",
+  requireRole("ADMIN"),
+  asyncHandler(updateDepartmentController),
+);
+departmentsRouter.delete(
+  "/:id",
+  requireRole("ADMIN"),
+  asyncHandler(deleteDepartmentController),
+);

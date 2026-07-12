@@ -77,6 +77,24 @@ async function ensureAssetTagSequence() {
   await prisma.$executeRaw`CREATE SEQUENCE IF NOT EXISTS asset_tag_sequence START WITH 1 INCREMENT BY 1`;
 }
 
+/** Align the Postgres sequence with existing AF-#### tags (used by seed). */
+export async function syncAssetTagSequence() {
+  await ensureAssetTagSequence();
+  const rows = await prisma.$queryRaw<{ maxTag: string | null }[]>`
+    SELECT MAX("assetTag") AS "maxTag"
+    FROM "Asset"
+    WHERE "assetTag" ~ '^AF-[0-9]+$'
+  `;
+  const maxTag = rows[0]?.maxTag ?? null;
+  const match = maxTag?.match(/^AF-(\d+)$/);
+  const highWater = match ? Number(match[1]) : 0;
+  if (highWater > 0) {
+    await prisma.$executeRaw`SELECT setval('asset_tag_sequence', ${highWater}, true)`;
+  } else {
+    await prisma.$executeRaw`SELECT setval('asset_tag_sequence', 1, false)`;
+  }
+}
+
 async function nextAssetTag() {
   await ensureAssetTagSequence();
   const [row] = await prisma.$queryRaw<

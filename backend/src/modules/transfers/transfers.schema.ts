@@ -26,6 +26,14 @@ export const rejectTransferSchema = z.object({
   reason: z.string().trim().min(3, "Add a rejection reason.").max(500),
 });
 
+export const listTransfersQuerySchema = z.object({
+  status: transferStatusSchema.optional(),
+  assetId: z.string().uuid().optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+});
+
 export type CreateTransferInput = z.infer<typeof createTransferSchema>;
 export type TransferDecisionInput = z.infer<typeof transferDecisionSchema>;
 export type RejectTransferInput = z.infer<typeof rejectTransferSchema>;
+export type ListTransfersQuery = z.infer<typeof listTransfersQuerySchema>;

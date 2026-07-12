@@ -79,7 +79,10 @@ async function assertEmployeeActive(employeeId: string) {
 
 async function currentAllocationWithEmployee(assetId: string) {
   return prisma.allocation.findFirst({
-    where: { assetId, status: AllocationStatus.ACTIVE },
+    where: {
+      assetId,
+      status: { in: [AllocationStatus.ACTIVE, AllocationStatus.OVERDUE] },
+    },
     include: {
       employee: {
         select: {
@@ -97,10 +100,26 @@ function isManager(role: string) {
   return MANAGER_ROLES.has(role);
 }
 
+export async function markOverdueAllocations() {
+  const now = new Date();
+  const result = await prisma.allocation.updateMany({
+    where: {
+      status: AllocationStatus.ACTIVE,
+      expectedReturnDate: { lt: now },
+    },
+    data: { status: AllocationStatus.OVERDUE },
+  });
+  return { updated: result.count };
+}
+
 export async function listAllocations(
   query: ListAllocationsQuery,
   actor: { employeeId: string; role: string },
 ) {
+  if (query.status === AllocationStatus.OVERDUE) {
+    await markOverdueAllocations();
+  }
+
   const now = new Date();
   const where: Prisma.AllocationWhereInput = {
     assetId: query.assetId,
@@ -110,7 +129,7 @@ export async function listAllocations(
       ? { employeeId: actor.employeeId }
       : {}),
     ...(query.status === AllocationStatus.OVERDUE
-      ? { status: AllocationStatus.ACTIVE, expectedReturnDate: { lt: now } }
+      ? { status: AllocationStatus.OVERDUE }
       : query.status
         ? { status: query.status }
         : {}),
@@ -132,10 +151,12 @@ export async function listAllocations(
     items: items.map((allocation) => ({
       ...serializeAllocation(allocation),
       isOverdue:
-        allocation.status === AllocationStatus.ACTIVE &&
-        Boolean(
-          allocation.expectedReturnDate && allocation.expectedReturnDate < now,
-        ),
+        allocation.status === AllocationStatus.OVERDUE ||
+        (allocation.status === AllocationStatus.ACTIVE &&
+          Boolean(
+            allocation.expectedReturnDate &&
+              allocation.expectedReturnDate < now,
+          )),
     })),
     pagination: {
       page: query.page,
@@ -150,6 +171,7 @@ export async function listOverdueAllocations(actor: {
   employeeId: string;
   role: string;
 }) {
+  await markOverdueAllocations();
   return listAllocations(
     { status: AllocationStatus.OVERDUE, page: 1, limit: 100 },
     actor,
@@ -185,7 +207,8 @@ export async function allocateAsset(
   }
 
   const activeAllocation = await currentAllocationWithEmployee(asset.id);
-  if (asset.status !== AssetStatus.AVAILABLE) {
+
+  if (asset.status === AssetStatus.ALLOCATED || activeAllocation) {
     throw new AppError(
       409,
       "ASSET_ALREADY_ALLOCATED",
@@ -199,6 +222,18 @@ export async function allocateAsset(
     );
   }
 
+  if (asset.status !== AssetStatus.AVAILABLE) {
+    throw new AppError(
+      409,
+      "ASSET_NOT_AVAILABLE",
+      `The asset is not available for allocation (status: ${asset.status})`,
+      {
+        assetId: asset.id,
+        status: asset.status,
+      },
+    );
+  }
+
   const allocation = await prisma.$transaction(async (tx) => {
     const updated = await tx.asset.updateMany({
       where: { id: asset.id, status: AssetStatus.AVAILABLE },
@@ -207,7 +242,10 @@ export async function allocateAsset(
 
     if (updated.count === 0) {
       const current = await tx.allocation.findFirst({
-        where: { assetId: asset.id, status: AllocationStatus.ACTIVE },
+        where: {
+          assetId: asset.id,
+          status: { in: [AllocationStatus.ACTIVE, AllocationStatus.OVERDUE] },
+        },
         include: {
           employee: { select: { id: true, name: true, email: true } },
         },
@@ -261,18 +299,25 @@ export async function returnAllocation(
     throw new AppError(403, "FORBIDDEN", "You cannot return this allocation");
   }
 
-  if (allocation.status !== AllocationStatus.ACTIVE) {
+  const returnable = new Set<AllocationStatus>([
+    AllocationStatus.ACTIVE,
+    AllocationStatus.OVERDUE,
+  ]);
+  if (!returnable.has(allocation.status)) {
     throw new AppError(
       409,
       "ALLOCATION_NOT_ACTIVE",
-      "Only active allocations can be returned",
+      "Only active or overdue allocations can be returned",
     );
   }
 
   return prisma
     .$transaction(async (tx) => {
       const updated = await tx.allocation.updateMany({
-        where: { id, status: AllocationStatus.ACTIVE },
+        where: {
+          id,
+          status: { in: [AllocationStatus.ACTIVE, AllocationStatus.OVERDUE] },
+        },
         data: {
           status: AllocationStatus.RETURNED,
           returnedAt: new Date(),
@@ -285,7 +330,7 @@ export async function returnAllocation(
         throw new AppError(
           409,
           "ALLOCATION_NOT_ACTIVE",
-          "Only active allocations can be returned",
+          "Only active or overdue allocations can be returned",
         );
       }
 

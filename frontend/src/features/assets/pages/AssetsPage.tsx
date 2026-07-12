@@ -32,7 +32,6 @@ import {
   type AssetStatus,
 } from "../api";
 import {
-  assetConditionLabel,
   assetStatusLabel,
   assetStatusTone,
   formatCurrency,
@@ -69,16 +68,21 @@ export function AssetsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"ALL" | AssetStatus>("ALL");
   const [categoryId, setCategoryId] = useState("ALL");
+  const [departmentId, setDepartmentId] = useState("ALL");
+  const [location, setLocation] = useState("");
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [photoFileName, setPhotoFileName] = useState<string | null>(null);
 
   const filters = useMemo<AssetListFilters>(
     () => ({
       search: search.trim() || undefined,
       status: status === "ALL" ? undefined : status,
       categoryId: categoryId === "ALL" ? undefined : categoryId,
+      departmentId: departmentId === "ALL" ? undefined : departmentId,
+      location: location.trim() || undefined,
       limit: 50,
     }),
-    [search, status, categoryId],
+    [search, status, categoryId, departmentId, location],
   );
 
   const assetsQuery = useQuery({
@@ -88,6 +92,11 @@ export function AssetsPage() {
   const categoriesQuery = useQuery({
     queryKey: orgQueryKeys.categories,
     queryFn: orgApi.listCategories,
+    staleTime: 60_000,
+  });
+  const departmentsQuery = useQuery({
+    queryKey: orgQueryKeys.departments,
+    queryFn: orgApi.listDepartments,
     staleTime: 60_000,
   });
 
@@ -112,6 +121,7 @@ export function AssetsPage() {
       await queryClient.invalidateQueries({ queryKey: assetsQueryKeys.all });
       toast.success("Asset registered");
       setRegisterOpen(false);
+      setPhotoFileName(null);
       assetForm.reset();
     },
     onError: (error) =>
@@ -120,6 +130,7 @@ export function AssetsPage() {
 
   const assets = assetsQuery.data?.items ?? [];
   const categories = categoriesQuery.data ?? [];
+  const departments = departmentsQuery.data ?? [];
 
   const submitAsset = assetForm.handleSubmit((values) =>
     createMutation.mutate({
@@ -176,123 +187,151 @@ export function AssetsPage() {
         }
       />
 
-      <section className="grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 md:grid-cols-3">
-        <Field
-          label="Search"
-          placeholder="Tag, name, or serial number"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        <SelectField
-          label="Status"
-          value={status}
-          onChange={(event) =>
-            setStatus(event.target.value as "ALL" | AssetStatus)
-          }
-        >
-          {statusFilters.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </SelectField>
-        <SelectField
-          label="Category"
-          value={categoryId}
-          onChange={(event) => setCategoryId(event.target.value)}
-        >
-          <option value="ALL">All categories</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </SelectField>
-      </section>
-
-      {assetsQuery.isLoading ? (
-        <PageSkeleton />
-      ) : assetsQuery.isError ? (
-        <ErrorState
-          message={getErrorMessage(
-            assetsQuery.error,
-            "Assets could not be loaded.",
-          )}
-          onRetry={() => void assetsQuery.refetch()}
-        />
-      ) : assets.length === 0 ? (
-        <div className="rounded-xl border border-[var(--border)]">
-          <EmptyState
-            title="No assets yet"
-            description="Register the first asset to start tracking custody and allocation state."
-            icon={FolderClosed}
-            action={
-              <Button onClick={() => setRegisterOpen(true)}>
-                Register asset
-              </Button>
-            }
+      <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <h2 className="text-sm font-semibold text-[var(--ink)]">Filters</h2>
+          <Field
+            label="Search"
+            placeholder="Tag, name, or serial"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
           />
+          <SelectField
+            label="Status"
+            value={status}
+            onChange={(event) =>
+              setStatus(event.target.value as "ALL" | AssetStatus)
+            }
+          >
+            {statusFilters.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField
+            label="Category"
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.target.value)}
+          >
+            <option value="ALL">All categories</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField
+            label="Department"
+            value={departmentId}
+            onChange={(event) => setDepartmentId(event.target.value)}
+          >
+            <option value="ALL">All departments</option>
+            {departments.map((department) => (
+              <option key={department.id} value={department.id}>
+                {department.name}
+              </option>
+            ))}
+          </SelectField>
+          <Field
+            label="Location"
+            placeholder="Floor, building…"
+            value={location}
+            onChange={(event) => setLocation(event.target.value)}
+          />
+        </aside>
+
+        <div>
+          {assetsQuery.isLoading ? (
+            <PageSkeleton />
+          ) : assetsQuery.isError ? (
+            <ErrorState
+              message={getErrorMessage(
+                assetsQuery.error,
+                "Assets could not be loaded.",
+              )}
+              onRetry={() => void assetsQuery.refetch()}
+            />
+          ) : assets.length === 0 ? (
+            <div className="rounded-xl border border-[var(--border)]">
+              <EmptyState
+                title="No assets yet"
+                description="Register the first asset to start tracking custody and allocation state."
+                icon={FolderClosed}
+                action={
+                  <Button onClick={() => setRegisterOpen(true)}>
+                    Register asset
+                  </Button>
+                }
+              />
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
+              <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="bg-[var(--surface)] text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                    <th className="px-4 py-3">Asset</th>
+                    <th className="px-4 py-3">Category</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Location</th>
+                    <th className="px-4 py-3">Holder</th>
+                    <th className="px-4 py-3">Acquired</th>
+                    <th className="px-4 py-3 text-right">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assets.map((asset) => (
+                    <tr
+                      key={asset.id}
+                      className="cursor-pointer border-t border-[var(--border)] hover:bg-[var(--surface)]"
+                      onClick={() => navigate(`/assets/${asset.id}`)}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-[var(--ink)]">
+                          {asset.name}
+                        </div>
+                        <div className="font-mono text-xs text-[var(--muted)]">
+                          {asset.assetTag}
+                          {asset.serialNumber
+                            ? ` · ${asset.serialNumber}`
+                            : ""}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-[var(--muted)]">
+                        {asset.category?.name ?? "Uncategorized"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge tone={assetStatusTone(asset.status)}>
+                          {assetStatusLabel(asset.status)}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-[var(--muted)]">
+                        {asset.location}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--muted)]">
+                        {asset.currentHolder?.name ?? "Unassigned"}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--muted)]">
+                        {formatDate(asset.acquisitionDate)}
+                      </td>
+                      <td className="px-4 py-3 text-right text-[var(--muted)]">
+                        {formatCurrency(asset.acquisitionCost)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
-          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
-            <thead>
-              <tr className="bg-[var(--surface)] text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-                <th className="px-4 py-3">Asset</th>
-                <th className="px-4 py-3">Category</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Location</th>
-                <th className="px-4 py-3">Holder</th>
-                <th className="px-4 py-3">Acquired</th>
-                <th className="px-4 py-3 text-right">Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {assets.map((asset) => (
-                <tr
-                  key={asset.id}
-                  className="cursor-pointer border-t border-[var(--border)] hover:bg-[var(--surface)]"
-                  onClick={() => navigate(`/assets/${asset.id}`)}
-                >
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-[var(--ink)]">
-                      {asset.name}
-                    </div>
-                    <div className="font-mono text-xs text-[var(--muted)]">
-                      {asset.assetTag}
-                      {asset.serialNumber ? ` · ${asset.serialNumber}` : ""}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-[var(--muted)]">
-                    {asset.category?.name ?? "Uncategorized"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge tone={assetStatusTone(asset.status)}>
-                      {assetStatusLabel(asset.status)}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-[var(--muted)]">
-                    {asset.location}
-                  </td>
-                  <td className="px-4 py-3 text-[var(--muted)]">
-                    {asset.currentHolder?.name ?? "Unassigned"}
-                  </td>
-                  <td className="px-4 py-3 text-[var(--muted)]">
-                    {formatDate(asset.acquisitionDate)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-[var(--muted)]">
-                    {formatCurrency(asset.acquisitionCost)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      </div>
 
       <Modal
         open={registerOpen}
-        onClose={() => setRegisterOpen(false)}
+        onClose={() => {
+          setRegisterOpen(false);
+          setPhotoFileName(null);
+        }}
         title="Register asset"
         description="Add a new asset with the fields required for allocation and reporting."
       >
@@ -355,12 +394,30 @@ export function AssetsPage() {
             error={assetForm.formState.errors.location?.message}
             {...assetForm.register("location")}
           />
-          <Field
-            label="Photo URL"
-            placeholder="https://..."
-            error={assetForm.formState.errors.photoUrl?.message}
-            {...assetForm.register("photoUrl")}
-          />
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-[var(--ink)]">
+              Photo
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              className="block w-full text-sm text-[var(--muted)] file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--surface-strong)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[var(--ink)]"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (!file) {
+                  setPhotoFileName(null);
+                  assetForm.setValue("photoUrl", "");
+                  return;
+                }
+                setPhotoFileName(file.name);
+                assetForm.setValue("photoUrl", `stub://${file.name}`);
+              }}
+            />
+            <p className="text-sm text-[var(--muted)]">
+              File upload stub — stores a placeholder path until Phase 4
+              storage. {photoFileName ? `Selected: ${photoFileName}` : null}
+            </p>
+          </div>
           <label className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-white px-4 py-3 text-sm text-[var(--ink)] md:col-span-2">
             <input
               type="checkbox"
@@ -373,7 +430,10 @@ export function AssetsPage() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setRegisterOpen(false)}
+              onClick={() => {
+                setRegisterOpen(false);
+                setPhotoFileName(null);
+              }}
             >
               Cancel
             </Button>
