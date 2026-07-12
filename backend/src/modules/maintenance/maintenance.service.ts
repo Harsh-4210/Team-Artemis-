@@ -10,6 +10,8 @@ import {
 
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../utils/app-error";
+import { logActivity } from "../activity-logs/activity-logs.service";
+import { notify } from "../notifications/notify";
 import type {
   ApproveMaintenanceRequestInput,
   AssignTechnicianInput,
@@ -162,7 +164,7 @@ export async function createMaintenanceRequest(
     );
   }
 
-  return prisma.maintenanceRequest.create({
+  const created = await prisma.maintenanceRequest.create({
     data: {
       assetId: input.assetId,
       raisedById: actor.employeeId,
@@ -173,6 +175,8 @@ export async function createMaintenanceRequest(
     },
     include: maintenanceInclude,
   });
+  await logActivity({ employeeId: actor.employeeId, action: "MAINTENANCE_REQUEST_CREATED", entityType: "MAINTENANCE", entityId: created.id, details: { assetId: created.assetId } });
+  return created;
 }
 
 export async function approveMaintenanceRequest(
@@ -199,7 +203,7 @@ export async function approveMaintenanceRequest(
     );
   }
 
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const nextStatus = input.assignedTechnicianId
       ? MaintenanceStatus.TECHNICIAN_ASSIGNED
       : MaintenanceStatus.APPROVED;
@@ -222,6 +226,11 @@ export async function approveMaintenanceRequest(
 
     return updated;
   });
+  await Promise.all([
+    notify({ employeeId: updated.raisedById, type: "MAINTENANCE_APPROVED", title: "Maintenance request approved", message: `${updated.asset.name} is now under maintenance.`, relatedEntityType: "MAINTENANCE", relatedEntityId: updated.id }),
+    logActivity({ employeeId: actor.employeeId, action: "MAINTENANCE_APPROVED", entityType: "MAINTENANCE", entityId: updated.id, details: { assetId: updated.assetId } }),
+  ]);
+  return updated;
 }
 
 export async function rejectMaintenanceRequest(
@@ -240,7 +249,7 @@ export async function rejectMaintenanceRequest(
     );
   }
 
-  return prisma.maintenanceRequest.update({
+  const updated = await prisma.maintenanceRequest.update({
     where: { id },
     data: {
       status: MaintenanceStatus.REJECTED,
@@ -249,6 +258,11 @@ export async function rejectMaintenanceRequest(
     },
     include: maintenanceInclude,
   });
+  await Promise.all([
+    notify({ employeeId: updated.raisedById, type: "MAINTENANCE_REJECTED", title: "Maintenance request rejected", message: `Your request for ${updated.asset.name} was rejected.`, relatedEntityType: "MAINTENANCE", relatedEntityId: updated.id }),
+    logActivity({ employeeId: actor.employeeId, action: "MAINTENANCE_REJECTED", entityType: "MAINTENANCE", entityId: updated.id }),
+  ]);
+  return updated;
 }
 
 export async function assignTechnician(
@@ -348,7 +362,7 @@ export async function resolveMaintenanceRequest(
 
   const restoredStatus = await restorePostMaintenanceStatus(request.assetId);
 
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const updated = await tx.maintenanceRequest.update({
       where: { id },
       data: {
@@ -366,4 +380,9 @@ export async function resolveMaintenanceRequest(
 
     return updated;
   });
+  await Promise.all([
+    notify({ employeeId: updated.raisedById, type: "MAINTENANCE_RESOLVED", title: "Maintenance resolved", message: `${updated.asset.name} is available again.`, relatedEntityType: "MAINTENANCE", relatedEntityId: updated.id }),
+    logActivity({ employeeId: actor.employeeId, action: "MAINTENANCE_RESOLVED", entityType: "MAINTENANCE", entityId: updated.id }),
+  ]);
+  return updated;
 }

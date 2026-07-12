@@ -1,8 +1,12 @@
-import { ArrowRight, Boxes, CalendarClock, Settings2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Boxes, CalendarClock, Settings2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { PageHeader } from "../../../components/shared/PageHeader";
 import { Badge } from "../../../components/ui/Badge";
 import { useAuthStore } from "../../../stores/authStore";
+import { ErrorState, PageSkeleton } from "../../../components/shared/Feedback";
+import { getErrorMessage } from "../../../lib/utils";
+import { reportsApi } from "../../reports/api";
 
 const quickLinks = [
   { title: "Browse assets", description: "Find equipment and see current availability.", href: "/assets", icon: Boxes },
@@ -12,6 +16,12 @@ const quickLinks = [
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user);
   const roleLabel = user?.role.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const kpis = useQuery({ queryKey: ["dashboard-kpis"], queryFn: reportsApi.kpis, refetchInterval: 30_000 });
+  if (kpis.isLoading) return <PageSkeleton />;
+  if (kpis.isError) return <ErrorState message={getErrorMessage(kpis.error, "Dashboard data could not be loaded.")} onRetry={() => void kpis.refetch()} />;
+  const data = kpis.data;
+  if (!data) return <ErrorState message="Dashboard data is unavailable." onRetry={() => void kpis.refetch()} />;
+  const cards = [{ label: "Assets available", value: data.assetsAvailable }, { label: "Assets allocated", value: data.assetsAllocated }, { label: "Maintenance today", value: data.maintenanceToday }, { label: "Active bookings", value: data.activeBookings }, { label: "Pending transfers", value: data.pendingTransfers }, { label: "Upcoming returns", value: data.upcomingReturns }];
   return (
     <div className="space-y-8">
       <PageHeader title={`Good to see you, ${user?.name.split(" ")[0] ?? "there"}`} description="Your starting point for current assets, reservations, and organization work." />
@@ -23,6 +33,7 @@ export function DashboardPage() {
           <div><p className="text-xs text-[var(--muted)]">Signed in as</p><p className="mt-1 text-sm font-medium text-[var(--ink)]">{user?.email}</p></div>
         </div>
       </section>
+      <section aria-label="Today’s overview"><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-semibold text-[var(--ink)]">Today’s overview</h2><span className="text-xs text-[var(--muted)]">Refreshes every 30 seconds</span></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{cards.map((card) => <div key={card.label} className="rounded-xl border border-[var(--border)] bg-white p-5"><p className="text-sm text-[var(--muted)]">{card.label}</p><p className="mt-2 text-3xl font-semibold text-[var(--ink)]">{card.value}</p></div>)}<div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-5"><div className="flex items-center gap-2 text-[var(--danger)]"><AlertTriangle className="size-4" /><p className="text-sm font-medium">Overdue returns</p></div><p className="mt-2 text-3xl font-semibold text-[var(--danger)]">{data.overdueReturns}</p><p className="mt-1 text-xs text-[var(--danger)]">Needs follow-up</p></div></div></section>
       <section aria-labelledby="quick-actions-heading">
         <h2 id="quick-actions-heading" className="text-xl font-semibold text-[var(--ink)]">Start here</h2>
         <div className="mt-4 divide-y divide-[var(--border)] rounded-xl border border-[var(--border)]">

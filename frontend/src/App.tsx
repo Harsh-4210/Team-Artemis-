@@ -1,4 +1,4 @@
-import { BarChart3, Boxes, ClipboardCheck } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import { Navigate, RouterProvider, createBrowserRouter } from "react-router";
 import { AppShell } from "./components/layout/AppShell";
 import { LoginPage } from "./features/auth/pages/LoginPage";
@@ -8,9 +8,13 @@ import { AssetsPage } from "./features/assets/pages/AssetsPage";
 import { AllocationCreatePage } from "./features/allocations/pages/AllocationCreatePage";
 import { AllocationsPage } from "./features/allocations/pages/AllocationsPage";
 import { TransfersPage } from "./features/allocations/pages/TransfersPage";
+import { AuditDetailPage } from "./features/audits/pages/AuditDetailPage";
+import { AuditsPage } from "./features/audits/pages/AuditsPage";
 import { BookingsPage } from "./features/bookings/pages/BookingsPage";
 import { DashboardPage } from "./features/dashboard/pages/DashboardPage";
 import { MaintenancePage } from "./features/maintenance/pages/MaintenancePage";
+import { ReportsPage } from "./features/reports/pages/ReportsPage";
+import { ActivityLogsPage } from "./features/activity-logs/pages/ActivityLogsPage";
 import { CategoriesPage } from "./features/org-setup/pages/CategoriesPage";
 import { DepartmentsPage } from "./features/org-setup/pages/DepartmentsPage";
 import { EmployeesPage } from "./features/org-setup/pages/EmployeesPage";
@@ -54,30 +58,10 @@ export const router = createBrowserRouter([
       { path: "transfers", element: <TransfersPage /> },
       { path: "bookings", element: <BookingsPage /> },
       { path: "maintenance", element: <MaintenancePage /> },
-      {
-        path: "audits",
-        element: (
-          <ModulePlaceholderPage
-            title="Audits"
-            description="Verify assets through assigned, structured audit cycles."
-            emptyTitle="Audit cycles are coming in Phase 4"
-            emptyDescription="Auditors will verify asset condition and report discrepancies from this workspace."
-            icon={ClipboardCheck}
-          />
-        ),
-      },
-      {
-        path: "reports",
-        element: (
-          <ModulePlaceholderPage
-            title="Reports"
-            description="Review allocation, utilization, maintenance, and booking patterns."
-            emptyTitle="Operational reports are coming in Phase 4"
-            emptyDescription="Authorized roles will see scoped metrics and downloadable reports here."
-            icon={BarChart3}
-          />
-        ),
-      },
+      { path: "audits", element: <AuditsPage /> },
+      { path: "audits/:id", element: <AuditDetailPage /> },
+      { path: "reports", element: <ReportsPage /> },
+      { path: "activity-logs", element: <RoleGate roles={["ADMIN"]}><ActivityLogsPage /></RoleGate> },
       {
         path: "org-setup",
         element: (

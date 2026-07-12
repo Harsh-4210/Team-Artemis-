@@ -2,6 +2,8 @@ import { AssetStatus, BookingStatus, EmployeeStatus, Prisma, Role } from "@prism
 
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../utils/app-error";
+import { logActivity } from "../activity-logs/activity-logs.service";
+import { notify } from "../notifications/notify";
 import type {
   CreateBookingInput,
   ListBookingsQuery,
@@ -197,7 +199,7 @@ export async function createBooking(
 
   await assertNoOverlap({ assetId: input.assetId, startTime, endTime });
 
-  return prisma.booking.create({
+  const booking = await prisma.booking.create({
     data: {
       assetId: input.assetId,
       employeeId,
@@ -208,6 +210,11 @@ export async function createBooking(
     },
     include: bookingInclude,
   });
+  await Promise.all([
+    notify({ employeeId, type: "BOOKING_CONFIRMED", title: "Booking confirmed", message: `${booking.asset.name} is booked for ${booking.startTime.toLocaleString()}.`, relatedEntityType: "BOOKING", relatedEntityId: booking.id }),
+    logActivity({ employeeId: actor.employeeId, action: "BOOKING_CREATED", entityType: "BOOKING", entityId: booking.id, details: { assetId: booking.assetId } }),
+  ]);
+  return booking;
 }
 
 export async function cancelBooking(id: string, actor: { employeeId: string; role: Role }) {

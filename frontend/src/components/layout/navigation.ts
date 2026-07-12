@@ -6,6 +6,7 @@ import {
   Boxes,
   ClipboardCheck,
   Gauge,
+  History,
   Settings2,
   Wrench,
   type LucideIcon,
@@ -28,6 +29,7 @@ export const navigationItems: NavigationItem[] = [
   { label: "Maintenance", href: "/maintenance", icon: Wrench },
   { label: "Audits", href: "/audits", icon: ClipboardCheck },
   { label: "Reports", href: "/reports", icon: BarChart3 },
+  { label: "Activity logs", href: "/activity-logs", icon: History, roles: ["ADMIN"] },
   { label: "Org Setup", href: "/org-setup", icon: Settings2, roles: ["ADMIN"] },
 ];
 

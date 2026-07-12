@@ -1,0 +1,20 @@
+import { useQuery } from "@tanstack/react-query";
+import { Download } from "lucide-react";
+import { useState } from "react";
+import { PageHeader } from "../../../components/shared/PageHeader";
+import { EmptyState, ErrorState, PageSkeleton } from "../../../components/shared/Feedback";
+import { Button } from "../../../components/ui/Button";
+import { getErrorMessage } from "../../../lib/utils";
+import { reportsApi } from "../api";
+
+type Tab = "utilization" | "maintenance" | "department" | "heatmap";
+const tabs: Array<{ id: Tab; label: string }> = [{ id: "utilization", label: "Utilization" }, { id: "maintenance", label: "Maintenance" }, { id: "department", label: "Department" }, { id: "heatmap", label: "Booking heatmap" }];
+export function ReportsPage() {
+ const [tab, setTab] = useState<Tab>("utilization");
+ const query = useQuery<unknown[]>({ queryKey: ["reports", tab], queryFn: async () => tab === "utilization" ? await reportsApi.utilization() : tab === "maintenance" ? await reportsApi.maintenance() : tab === "department" ? await reportsApi.department() : await reportsApi.heatmap() });
+ if (query.isLoading) return <PageSkeleton />; if (query.isError) return <ErrorState message={getErrorMessage(query.error, "Report could not be loaded.")} onRetry={() => void query.refetch()} />;
+ const rows = query.data ?? [];
+ return <div className="space-y-6"><PageHeader title="Reports & analytics" description="Live operational data for better asset decisions." actions={<a href={reportsApi.exportUrl(tab)}><Button variant="secondary"><Download className="size-4" />Export CSV</Button></a>} /><div className="flex flex-wrap gap-2">{tabs.map((item) => <button key={item.id} type="button" onClick={() => setTab(item.id)} className={`rounded-lg px-4 py-2 text-sm font-medium ${tab === item.id ? "bg-[var(--primary)] text-white" : "border border-[var(--border)] text-[var(--muted)] hover:bg-[var(--surface)]"}`}>{item.label}</button>)}</div>{!rows.length ? <EmptyState title="No report data yet" description="Use AssetFlow activity to populate this report." /> : tab === "heatmap" ? <Heatmap rows={rows as Array<{ day: number; hour: number; count: number }>} /> : <ReportTable tab={tab} rows={rows as Array<Record<string, string | number | boolean>>} />}</div>;
+}
+function ReportTable({ tab, rows }: { tab: Exclude<Tab, "heatmap">; rows: Array<Record<string, string | number | boolean>> }) { const headers = Object.keys(rows[0] ?? {}); return <div className="overflow-x-auto rounded-xl border border-[var(--border)]"><table className="w-full text-left text-sm"><thead className="bg-[var(--surface)] text-xs uppercase text-[var(--muted)]"><tr>{headers.map((header) => <th key={header} className="p-3">{header.replaceAll(/([A-Z])/g, " $1")}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={String(row.id ?? row.assetId ?? row.departmentId ?? index)} className="border-t border-[var(--border)]">{headers.map((header) => <td key={header} className="p-3 text-[var(--ink)]">{String(row[header])}</td>)}</tr>)}</tbody></table></div>; }
+function Heatmap({ rows }: { rows: Array<{ day: number; hour: number; count: number }> }) { const max = Math.max(1, ...rows.map((row) => row.count)); const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]; return <div className="overflow-x-auto rounded-xl border border-[var(--border)] p-4"><div className="grid min-w-[900px] grid-cols-[48px_repeat(24,1fr)] gap-1 text-[10px]">{["", ...Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"))].map((label, index) => <div key={`header-${index}`} className="text-center text-[var(--muted)]">{label}</div>)}{labels.flatMap((label, day) => [<div key={label} className="flex items-center text-xs text-[var(--muted)]">{label}</div>, ...Array.from({ length: 24 }, (_, hour) => { const count = rows.find((row) => row.day === day && row.hour === hour)?.count ?? 0; return <div key={`${day}-${hour}`} title={`${label} ${hour}:00 — ${count} bookings`} className="aspect-square rounded" style={{ backgroundColor: count ? `color-mix(in oklch, var(--primary) ${20 + (count / max) * 80}%, white)` : "var(--surface)" }} /> })])}</div></div>; }

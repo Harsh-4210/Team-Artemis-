@@ -8,12 +8,16 @@ import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { authRouter } from "./modules/auth/auth.routes";
 import { allocationsRouter } from "./modules/allocations/allocations.routes";
 import { assetsRouter } from "./modules/assets/assets.routes";
+import { auditCyclesRouter, auditRecordsRouter } from "./modules/audits/audits.routes";
 import { bookingsRouter } from "./modules/bookings/bookings.routes";
 import { categoriesRouter } from "./modules/categories/categories.routes";
 import { departmentsRouter } from "./modules/departments/departments.routes";
 import { employeesRouter } from "./modules/employees/employees.routes";
 import { maintenanceRouter } from "./modules/maintenance/maintenance.routes";
 import { transfersRouter } from "./modules/transfers/transfers.routes";
+import { notificationsRouter } from "./modules/notifications/notifications.routes";
+import { activityLogsRouter } from "./modules/activity-logs/activity-logs.routes";
+import { reportsRouter } from "./modules/reports/reports.routes";
 
 export const app = express();
 
@@ -61,6 +65,11 @@ app.use("/api/v1/employees", employeesRouter);
 app.use("/api/v1/bookings", bookingsRouter);
 app.use("/api/v1/maintenance", maintenanceRouter);
 app.use("/api/v1/transfers", transfersRouter);
+app.use("/api/v1/notifications", notificationsRouter);
+app.use("/api/v1/activity-logs", activityLogsRouter);
+app.use("/api/v1/reports", reportsRouter);
+app.use("/api/v1/audit-cycles", auditCyclesRouter);
+app.use("/api/v1/audit-records", auditRecordsRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
