@@ -16,17 +16,27 @@ const schema = z.object({
 });
 type LoginValues = z.infer<typeof schema>;
 
+const demoAccounts = [
+  { label: "Admin", email: "admin@artemis.com" },
+  { label: "Asset Manager", email: "sarah-manager@artemis.com" },
+  { label: "Department Head", email: "raj-head@artemis.com" },
+  { label: "Employee", email: "priya-employee@artemis.com" },
+] as const;
+
+const demoPassword = "demo1234";
+
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const setSession = useAuthStore((state) => state.setSession);
   const [formError, setFormError] = useState<string | null>(null);
+  const [activeDemo, setActiveDemo] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginValues>({
     resolver: zodResolver(schema),
     defaultValues: { email: "admin@artemis.com", password: "" },
   });
 
-  const onSubmit = handleSubmit(async (values) => {
+  const signIn = async (values: LoginValues) => {
     setFormError(null);
     try {
       const session = await authApi.login(values);
@@ -36,7 +46,18 @@ export function LoginPage() {
     } catch (error) {
       setFormError(getErrorMessage(error, "Email or password is incorrect."));
     }
-  });
+  };
+
+  const onSubmit = handleSubmit(signIn);
+
+  const signInAsDemo = async (account: (typeof demoAccounts)[number]) => {
+    setActiveDemo(account.email);
+    try {
+      await signIn({ email: account.email, password: demoPassword });
+    } finally {
+      setActiveDemo(null);
+    }
+  };
 
   return (
     <AuthShell
@@ -50,8 +71,25 @@ export function LoginPage() {
         <Field label="Password" type="password" autoComplete="current-password" placeholder="Enter your password" error={errors.password?.message} {...register("password")} />
         <Button type="submit" className="mt-1 min-h-11 w-full" loading={isSubmitting}>Sign in</Button>
       </form>
-      <div className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--muted)]">
-        Demo admin: <span className="font-medium text-[var(--ink)]">admin@artemis.com</span> / <span className="font-medium text-[var(--ink)]">demo1234</span>
+      <div className="relative my-7 flex items-center" aria-hidden="true">
+        <div className="h-px flex-1 bg-[var(--border)]" />
+        <span className="px-4 text-sm font-medium text-[var(--muted)]">Demo accounts</span>
+        <div className="h-px flex-1 bg-[var(--border)]" />
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" aria-label="Demo accounts">
+        {demoAccounts.map((account) => (
+          <Button
+            key={account.email}
+            type="button"
+            variant="secondary"
+            className="min-h-11 w-full"
+            loading={activeDemo === account.email}
+            disabled={Boolean(activeDemo) || isSubmitting}
+            onClick={() => void signInAsDemo(account)}
+          >
+            {account.label}
+          </Button>
+        ))}
       </div>
     </AuthShell>
   );
